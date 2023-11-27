@@ -167,7 +167,6 @@ if __name__ == '__main__':
             testDataloader = DataLoader(dataset=testData, batch_size=1)
 
             transform = T.Compose([
-                # 归一化
                 T.NormalizeFeatures(),
                 T.ToDevice(device),
                 T.RandomLinkSplit(num_val=0.05, num_test=0.15, is_undirected=True,
