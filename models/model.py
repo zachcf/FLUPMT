@@ -149,7 +149,7 @@ class Extraction_Network(nn.Module):
     def __init__(self, FeatureDim, ExpertOutDim, TaskExpertNum, CommonExpertNum, GateNum):
         super(Extraction_Network, self).__init__()
 
-        self.GateNum = GateNum  # 输出几个Gate的结果，2表示最后一层只输出两个任务的Gate，3表示还要输出中间共享层的Gate
+        self.GateNum = GateNum  
 
         self.n_task = 2
         self.n_share = 1
@@ -158,27 +158,27 @@ class Extraction_Network(nn.Module):
         self.seqExpert = LSTFEncoder(enc_in=56400)
         self.CNNExpert = GCNEncoder(56400, 200, 512)
 
-        self.Experts_A = [self.seqExpert for i in range(TaskExpertNum)]  # Experts_A模块，TaskExpertNum个Expert
+        self.Experts_A = [self.seqExpert for i in range(TaskExpertNum)] 
 
         # self.seqExpert = self.seqLayer
 
         self.Experts_Shared = [self.Exper_Layer for i in
-                               range(CommonExpertNum)]  # Experts_Shared模块，CommonExpertNum个Expert
+                               range(CommonExpertNum)]  
 
-        self.Experts_B = [self.CNNExpert for i in range(TaskExpertNum)]  # Experts_B模块，TaskExpertNum个Expert
+        self.Experts_B = [self.CNNExpert for i in range(TaskExpertNum)]  
 
 
         self.Task_Gate_Layer = nn.Sequential(nn.Linear(FeatureDim, TaskExpertNum + CommonExpertNum),
                                              nn.Softmax(dim=1))
-        self.Task_Gates = [self.Task_Gate_Layer for i in range(self.n_task)]  # 特定任务gate
+        self.Task_Gates = [self.Task_Gate_Layer for i in range(self.n_task)]  
 
         self.Shared_Gate_Layer = nn.Sequential(nn.Linear(FeatureDim, 2 * TaskExpertNum + CommonExpertNum),
                                                nn.Softmax(dim=1))
-        self.Shared_Gates = [self.Shared_Gate_Layer for i in range(self.n_share)]  # 共享gate
+        self.Shared_Gates = [self.Shared_Gate_Layer for i in range(self.n_share)] 
 
     def forward(self, x_A, x_B):
         bat = x_A.shape[0]
-        Experts_A_Out = [expert(x_A) for expert in self.Experts_A]  #
+        Experts_A_Out = [expert(x_A) for expert in self.Experts_A]  
         Experts_A_Out= torch.cat(([expert[:, :,np.newaxis, :] for expert in Experts_A_Out]),dim=1)
 
 
@@ -188,19 +188,19 @@ class Extraction_Network(nn.Module):
         Experts_A_Out = Experts_A_Out.reshape(-1,Experts_A_Out.shape[-2],Experts_A_Out.shape[-1])
         la = Experts_A_Out.shape[0]
         lb = x_A.shape[0]
-        Experts_Shared_Out = [expert(x_S) for expert in self.Experts_Shared]  #
+        Experts_Shared_Out = [expert(x_S) for expert in self.Experts_Shared]  
         Experts_Shared_Out = torch.cat(([expert[:, np.newaxis, :] for expert in Experts_Shared_Out]),
                                        dim=1)  # (bs,CommonExpertNum,ExpertOutDim)(175,1,512)
 
-        Experts_B_Out = [expert(x_B) for expert in self.Experts_B]  #
+        Experts_B_Out = [expert(x_B) for expert in self.Experts_B]  
         Experts_B_Out = torch.cat(([expert[:, np.newaxis, :] for expert in Experts_B_Out]),
                                   dim=1)
         #  (bs,TaskExpertNum(1),ExpertOutDim)(170,1,512)
-        Gate_A = self.Task_Gates[0](x_A)  # n_task个(bs,TaskExpertNum+CommonExpertNum)5,
+        Gate_A = self.Task_Gates[0](x_A)  # (bs,TaskExpertNum+CommonExpertNum)5,
 
 
 
-        Gate_B = self.Task_Gates[1](x_B.x)  #  n_task个(bs,TaskExpertNum+CommonExpertNum)170,
+        Gate_B = self.Task_Gates[1](x_B.x)  #  (bs,TaskExpertNum+CommonExpertNum)170,
 
         '''GateA out'''
         #l,bs,TaskExpertNum,ExpertOutDim
@@ -215,9 +215,9 @@ class Extraction_Network(nn.Module):
         '''GateB out'''
         g = Gate_B.unsqueeze(2)  # (bs,TaskExpertNum+CommonExpertNum,1)
         experts = torch.cat([Experts_B_Out, Experts_Shared_Out[lb:]],
-                            dim=1)  # 维度(bs,TaskExpertNum+CommonExpertNum,ExpertOutDim)
-        Gate_B_Out = torch.matmul(experts.transpose(1, 2), g)  # 维度(bs,ExpertOutDim,1)
-        Gate_B_Out = Gate_B_Out.squeeze(2)  # 维度(bs,ExpertOutDim)
+                            dim=1)  # (bs,TaskExpertNum+CommonExpertNum,ExpertOutDim)
+        Gate_B_Out = torch.matmul(experts.transpose(1, 2), g)  # (bs,ExpertOutDim,1)
+        Gate_B_Out = Gate_B_Out.squeeze(2)  # (bs,ExpertOutDim)
 
 
         return Gate_A_Out, (Gate_B_Out,x_B.edge_index)
