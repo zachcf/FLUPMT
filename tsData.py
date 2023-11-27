@@ -59,23 +59,12 @@ class strainDataset(Dataset):
                 self.datalist[i][j] = self.__seq_encode(self.datalist[i][j])#embedding
         self.datalist = np.array(self.datalist)
         self.label = np.array(self.label)
-        # self.__scaler = MinMaxScaler(feature_range=(0, 1))
-        # label_shape = self.label.shape
-        # scaler = self.__scaler.fit_transform(self.label.reshape(-1,1))
-        # self.label = scaler.reshape(label_shape)
+
         self.datalist =  self.datalist.reshape(self.datalist.shape[0],self.datalist.shape[1],-1)
         self.datalen = len(self.label)
         print("Coding completed")
     def inverse_transform(self,data):
         return self.__scaler.inverse_transform(data)
-    # def __transweq(self,seq):
-    #     if not isinstance(seq, str): return seq
-    #     slen  = len(seq)
-    #     if self.maxLen>=slen:#截取和补充
-    #         seq = seq + "-" * (self.maxLen-slen)
-    #     else:
-    #         seq = seq[:self.maxLen]
-    #     return seq
 
     def __label_encode(self,label):
         amino_acids = ['A', 'F', 'Q', 'R', 'T', 'Y', 'V', 'I', 'H', 'K', 'P', 'N', 'E', 'G', 'S', 'M', 'D', 'W', 'C',
